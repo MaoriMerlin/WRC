@@ -1,0 +1,241 @@
+// This is the expanded version of the game container structure using Pixi.js + TypeScript
+// Includes inventory system, wallet mock, dynamic racing outcome, and crafting logic
+
+import * as PIXI from 'pixi.js';
+import { useEffect, useRef } from 'react';
+
+const GAME_WIDTH = 750;
+const GAME_HEIGHT = 1334;
+
+// Game State
+const gameState = {
+  walletConnected: false,
+  walletAddress: '',
+  inventory: {
+    engine: 0,
+    turbo: 1,
+    gToken: 100,
+    wax: 10
+  }
+};
+
+function initializeGame(canvas: HTMLCanvasElement): PIXI.Application {
+  const app = new PIXI.Application({
+    view: canvas,
+    width: GAME_WIDTH,
+    height: GAME_HEIGHT,
+    backgroundColor: 0x000000,
+    antialias: true,
+    resolution: window.devicePixelRatio || 1,
+    autoDensity: true,
+    powerPreference: 'high-performance'
+  });
+
+  app.loader.load(() => {
+    startMainMenu(app);
+  });
+
+  return app;
+}
+
+function startMainMenu(app: PIXI.Application) {
+  const menuContainer = new PIXI.Container();
+
+  const title = new PIXI.Text('🏁 Real Racecar Crafting Game', {
+    fontSize: 36,
+    fill: '#ffffff',
+    fontWeight: 'bold',
+    wordWrap: true,
+    wordWrapWidth: GAME_WIDTH - 80
+  });
+  title.anchor.set(0.5);
+  title.position.set(GAME_WIDTH / 2, 150);
+
+  const playButton = new PIXI.Text('▶️ Enter Garage', {
+    fontSize: 28,
+    fill: '#00ff00',
+    fontWeight: 'bold'
+  });
+  playButton.anchor.set(0.5);
+  playButton.position.set(GAME_WIDTH / 2, 300);
+  playButton.interactive = true;
+  playButton.buttonMode = true;
+  playButton.on('pointerdown', () => {
+    app.stage.removeChild(menuContainer);
+    loadGarageScene(app);
+  });
+
+  menuContainer.addChild(title, playButton);
+  app.stage.addChild(menuContainer);
+}
+
+function loadGarageScene(app: PIXI.Application) {
+  const garageContainer = new PIXI.Container();
+
+  const title = new PIXI.Text('🚗 Garage - Manage Your Car', {
+    fontSize: 24,
+    fill: '#ffffff'
+  });
+  title.anchor.set(0.5);
+  title.position.set(GAME_WIDTH / 2, 60);
+  garageContainer.addChild(title);
+
+  const status = new PIXI.Text(
+    `🧰 Engine: ${gameState.inventory.engine} | 🔋 GToken: ${gameState.inventory.gToken} | 🪙 WAX: ${gameState.inventory.wax}`,
+    { fontSize: 16, fill: '#cccccc' }
+  );
+  status.anchor.set(0.5);
+  status.position.set(GAME_WIDTH / 2, 110);
+  garageContainer.addChild(status);
+
+  const walletStatus = new PIXI.Text(
+    gameState.walletConnected ? `🔗 ${gameState.walletAddress}` : '🔌 Wallet Not Connected',
+    { fontSize: 16, fill: '#8888ff' }
+  );
+  walletStatus.anchor.set(0.5);
+  walletStatus.position.set(GAME_WIDTH / 2, 140);
+  garageContainer.addChild(walletStatus);
+
+  const upgradeButton = new PIXI.Text('🔧 Craft Engine (10 GToken + 1 WAX)', {
+    fontSize: 20,
+    fill: '#ffff00'
+  });
+  upgradeButton.anchor.set(0.5);
+  upgradeButton.position.set(GAME_WIDTH / 2, 200);
+  upgradeButton.interactive = true;
+  upgradeButton.buttonMode = true;
+  upgradeButton.on('pointerdown', () => {
+    simulateCrafting(app);
+  });
+
+  const uncraftButton = new PIXI.Text('♻️ Uncraft Turbo (5 GToken)', {
+    fontSize: 20,
+    fill: '#ff8800'
+  });
+  uncraftButton.anchor.set(0.5);
+  uncraftButton.position.set(GAME_WIDTH / 2, 260);
+  uncraftButton.interactive = true;
+  uncraftButton.buttonMode = true;
+  uncraftButton.on('pointerdown', () => {
+    simulateUncrafting(app);
+  });
+
+  const raceButton = new PIXI.Text('🏁 Start Race', {
+    fontSize: 24,
+    fill: '#00ffcc'
+  });
+  raceButton.anchor.set(0.5);
+  raceButton.position.set(GAME_WIDTH / 2, 340);
+  raceButton.interactive = true;
+  raceButton.buttonMode = true;
+  raceButton.on('pointerdown', () => {
+    app.stage.removeChild(garageContainer);
+    loadRaceScene(app);
+  });
+
+  const walletButton = new PIXI.Text('🔗 Connect WAX Wallet', {
+    fontSize: 20,
+    fill: '#ffffff'
+  });
+  walletButton.anchor.set(0.5);
+  walletButton.position.set(GAME_WIDTH / 2, 420);
+  walletButton.interactive = true;
+  walletButton.buttonMode = true;
+  walletButton.on('pointerdown', () => {
+    connectMockWallet(app);
+  });
+
+  garageContainer.addChild(upgradeButton, uncraftButton, raceButton, walletButton);
+  app.stage.addChild(garageContainer);
+}
+
+function simulateCrafting(app: PIXI.Application) {
+  if (gameState.inventory.gToken >= 10 && gameState.inventory.wax >= 1) {
+    gameState.inventory.gToken -= 10;
+    gameState.inventory.wax -= 1;
+    gameState.inventory.engine += 1;
+    alert('✅ Engine crafted!');
+    reloadGarage(app);
+  } else {
+    alert('❌ Not enough resources!');
+  }
+}
+
+function simulateUncrafting(app: PIXI.Application) {
+  if (gameState.inventory.turbo > 0) {
+    gameState.inventory.turbo -= 1;
+    gameState.inventory.gToken += 5;
+    alert('✅ Turbo uncrafted!');
+    reloadGarage(app);
+  } else {
+    alert('❌ No Turbo parts to uncraft!');
+  }
+}
+
+function reloadGarage(app: PIXI.Application) {
+  app.stage.removeChildren();
+  loadGarageScene(app);
+}
+
+function connectMockWallet(app: PIXI.Application) {
+  gameState.walletConnected = true;
+  gameState.walletAddress = 'wax-testuser123';
+  alert('🔐 Wallet Connected!');
+  reloadGarage(app);
+}
+
+function loadRaceScene(app: PIXI.Application) {
+  const raceContainer = new PIXI.Container();
+
+  const raceText = new PIXI.Text('🏎️ Racing in Progress...', {
+    fontSize: 28,
+    fill: '#ffffff'
+  });
+  raceText.anchor.set(0.5);
+  raceText.position.set(GAME_WIDTH / 2, 200);
+
+  const place = Math.floor(Math.random() * 5) + 1;
+  const finishText = new PIXI.Text(`🎉 You finished ${place}${getOrdinal(place)}!`, {
+    fontSize: 22,
+    fill: '#00ff00'
+  });
+  finishText.anchor.set(0.5);
+  finishText.position.set(GAME_WIDTH / 2, 280);
+
+  const backButton = new PIXI.Text('🔙 Return to Garage', {
+    fontSize: 20,
+    fill: '#ffffff'
+  });
+  backButton.anchor.set(0.5);
+  backButton.position.set(GAME_WIDTH / 2, 360);
+  backButton.interactive = true;
+  backButton.buttonMode = true;
+  backButton.on('pointerdown', () => {
+    app.stage.removeChild(raceContainer);
+    loadGarageScene(app);
+  });
+
+  raceContainer.addChild(raceText, finishText, backButton);
+  app.stage.addChild(raceContainer);
+}
+
+function getOrdinal(n: number): string {
+  const s = ["th", "st", "nd", "rd"], v = n % 100;
+  return s[(v - 20) % 10] || s[v] || s[0];
+}
+
+export default function GameCanvas() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    if (canvasRef.current) {
+      initializeGame(canvasRef.current);
+    }
+  }, []);
+
+  return (
+    <div className="w-full h-full flex justify-center items-center bg-black">
+      <canvas ref={canvasRef} className="rounded-2xl shadow-lg w-full h-full" />
+    </div>
+  );
+}
